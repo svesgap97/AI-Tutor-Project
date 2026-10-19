@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utopia Lab - Chat with Clara</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+</head>
+
+<body>
+    <div id="consent-container" style="display:none; padding: 20px;">
+  <h2>Informed Consent</h2>
+  <p>
+  <strong>Informed Consent for Research Participation</strong>
+</p>
+<p>
+  Clara is an AI learning assistant used in this course. The instructor is
+  conducting research on how students interact with AI tools to support
+  learning.
+</p>    
+<ul>
+  <li>Your interactions with Clara may be recorded and analyzed for research purposes.</li>
+  <li>The data collected may include your prompts, responses, timestamps, and usage patterns.</li>
+  <li>Your participation is voluntary and will not affect your grade or standing in the course.</li>
+  <li>Research results may be presented in academic publications or conferences.</li>
+  <li>Whenever possible, data will be anonymized or de-identified before analysis.</li>
+  <li>Only authorized members of the research team will have access to the data.</li>
+  <li>You may withdraw your consent and request deletion of your identifiable data at any time, subject to institutional policies.</li>
+  <li>Clara is an AI assistant and may occasionally produce inaccurate information.</li>
+</ul>
+
+<p>
+  By selecting "I Agree", you confirm that you have read and understood this
+  information and consent to participate in this research study.
+</p>
+<button id="accept-consent-btn">I Agree</button>
+</div>
+<div id="app-container" style="display:none;">
+    <div id="sidebar-container">
+        <div id="sidebar">
+            <div id="user-status"></div>
+            <div id="accordion-container">
+
+    <div class="accordion-item">
+        <button class="accordion-header">How Can Clara Help?</button>
+        <div class="accordion-content">
+            <p>I am here to support your writing process. I can help you brainstorm ideas, develop characters, build settings, strengthen conflicts, and plan story endings. My job is to help you think, not to write the story for you.</p>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <button class="accordion-header">Use the Camera</button>
+        <div class="accordion-content">
+            <p>You can take a picture of your notes, worksheets, drafts, story maps, or classroom activities. I can analyze the image and help you understand, expand, or improve your ideas.</p>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <button class="accordion-header">Develop Your Ideas</button>
+        <div class="accordion-content">
+            <p>If you already have an idea, I can help you make it more interesting. Ask me how to improve a character, add details to a setting, create a stronger conflict, or make your ending more satisfying.</p>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <button class="accordion-header">Improve Your Writing</button>
+        <div class="accordion-content">
+            <p>You can share a paragraph or part of your story and ask for feedback. I can help you improve clarity, vocabulary, organization, and description while keeping your ideas and voice as the author.</p>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <button class="accordion-header">Ask Good Questions</button>
+        <div class="accordion-content">
+            <p>The more specific your question is, the better I can help. Instead of asking "Help me with my story," try asking "What conflict could my hero face?" or "How can I make this setting feel mysterious?"</p>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <button class="accordion-header">Editing Mode</button>
+        <div class="accordion-content">
+            <p>When your draft is finished, I can help you revise it. I can point out confusing sections, suggest stronger word choices, identify missing details, and help improve the flow of your story.</p>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <button class="accordion-header">You Are the Author</button>
+        <div class="accordion-content">
+            <p>Your story belongs to you. I can suggest ideas and ask questions, but the important decisions are yours. The goal is to help you become a more creative and independent writer.</p>
+        </div>
+    </div>
+
+    </div>
+
+        </div>
+        <button id="sidebar-open-handle" type="button" aria-label="Open sidebar"></button>
+    </div>
+
+    <div id="chat-container">
+            <div id="chat-box">
+            </div>
+            <div id="input-area">
+                <button id="ocr-button" title="Read text with the camera">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" fill="currentColor">
+                        <path d="M0 0h24v24H0V0z" fill="none"/>
+                        <path d="M12 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm0-10c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+                    </svg>
+                </button>
+                <textarea id="user-input" placeholder="Type your message..." rows="1"></textarea>
+                <button id="send-button" title="Send message">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+        <div id="mobile-login-screen">
+        <h4>Welcome to Utopia Lab</h4>
+        <p>To get started, please sign in with your Google account.</p>
+        <a href="/login"><button>Sign in with Google</button></a>
+    </div>
+
+    <div id="ocr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:black; z-index:300; flex-direction:column; justify-content:center; align-items:center;">
+        <video id="ocr-video" playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+        <button id="ocr-capture-button" style="position:absolute; bottom:30px; width:70px; height:70px; border-radius:50%; border: 5px solid white; background-color:rgba(255,255,255,0.5); cursor:pointer;"></button>
+        
+        <div id="cropper-container" style="display:none; width:100%; height:100%;">
+            <img id="cropper-image" style="max-width:100%; max-height:100%;">
+        </div>
+
+        <div id="cropper-actions" style="display:none; position:absolute; bottom:20px; z-index:310; display:flex; gap:20px;">
+            <button id="cancel-crop-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#D08770; color:white; border:none; cursor:pointer;">Cancel</button>
+            <button id="confirm-crop-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#A3BE8C; color:white; border:none; cursor:pointer;">Confirm Crop</button>
+        </div>
+
+        <div id="verification-container" style="display:none; width: 90%; max-width: 600px; height: 80%; flex-direction: column; background-color: var(--background-color); border-radius: 10px; padding: 20px; box-sizing: border-box;">
+            <p style="margin: 0 0 10px 0; color: var(--text-color-light);">Review the recognized text:</p>
+            <textarea id="verification-textarea" style="width: 100%; flex-grow: 1; resize: none; font-family: 'Oxanium', sans-serif; font-size: 16px;"></textarea>
+            <div id="verification-actions" style="display:flex; gap: 20px; margin-top: 15px; justify-content: flex-end;">
+                <button id="go-back-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#D08770; color:white; border:none; cursor:pointer;">Back to Crop</button>
+                <button id="accept-text-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#A3BE8C; color:white; border:none; cursor:pointer;">Accept</button>
+            </div>
+        </div>
+        
+        <p id="ocr-status" style="position:absolute; top:30px; color:white; background-color:rgba(0,0,0,0.5); padding:10px; border-radius:10px; display:none;">Processing...</p>
+        <button id="ocr-close-button" style="position:absolute; top:20px; right:20px; font-size:24px; color:white; background:none; border:none; cursor:pointer; z-index: 320;">&times;</button>
+    </div>
+
+    <script src="/static/script.js" defer></script>
+
+</body>
+</html>
