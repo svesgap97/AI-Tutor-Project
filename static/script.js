@@ -294,12 +294,17 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraStatus('Opening your camera…');
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
-                throw new Error('Camera unavailable');
+                throw new Error(window.isSecureContext ? 'Camera unsupported' : 'Camera requires HTTPS');
             }
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    // Desktop browsers use the default webcam; phones prefer the rear camera.
+                    video: {
+                        ...(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+                            ? { facingMode: { ideal: 'environment' } } : {}),
+                        width: { ideal: 1920 }, height: { ideal: 1080 }
+                    },
                     audio: false
                 });
             } catch (error) {
@@ -321,7 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session !== cameraSession) return;
             stopCamera();
             cameraGuide.hidden = true;
-            cameraStatus(error.name === 'NotAllowedError'
+            cameraStatus(error.message === 'Camera requires HTTPS'
+                ? 'Camera access needs HTTPS or localhost. Open Clara using a secure address.'
+                : error.message === 'Camera unsupported'
+                ? 'This browser cannot open the camera. Try opening this address in Chrome, Edge, Firefox or Safari.'
+                : error.name === 'NotFoundError'
+                ? 'No webcam was found. Connect or enable your laptop camera, then try again.'
+                : error.name === 'NotReadableError'
+                ? 'Your webcam is busy or blocked by the system. Close other camera apps and check your laptop privacy settings.'
+                : error.name === 'NotAllowedError'
                 ? 'Camera access is blocked. Allow camera access in your browser, then try again.'
                 : 'The camera could not open. Check that it is connected and not in use, then try again.', true);
             cameraRetry.hidden = false;
