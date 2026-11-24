@@ -562,3 +562,50 @@ body.sidebar-open #chat-container {
 #consent-container button:hover {
   background: #45a049;
 }
+
+/* Clara camera: shared slate, blue and gold palette */
+.camera-modal[hidden], .camera-modal [hidden] { display: none !important; }
+.camera-modal { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: 24px; box-sizing: border-box; background: rgba(18,24,34,.85); backdrop-filter: blur(16px); }
+.camera-panel { width: min(100%,900px); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; background: var(--background-color); border: 1px solid rgba(236,239,244,.18); border-radius: 24px; box-shadow: 0 24px 80px #0007; color: var(--text-color-light); font-family: 'Roboto', sans-serif; }
+.camera-header { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:24px 28px 16px; }
+.camera-eyebrow { color:var(--accent-yellow); font-size:11px; font-weight:700; letter-spacing:.14em; }
+.camera-header h2 { font:700 clamp(22px,4vw,30px) 'Roboto',sans-serif; margin:8px 0 0; }
+.camera-modal button { font:700 15px 'Roboto',sans-serif; min-height:48px; border-radius:12px; padding:12px 20px; cursor:pointer; }
+.camera-icon-button { background:var(--bot-bubble-color); color:var(--text-color-light); border:1px solid #ffffff30; font-size:26px !important; min-width:48px; padding:4px !important; }
+.camera-steps { list-style:none; display:flex; gap:8px; padding:0 28px; margin:0; }
+.camera-steps li { flex:1; padding:12px 8px; border-bottom:3px solid var(--bot-bubble-color); color:#c6ceda; font-size:14px; }
+.camera-steps li[aria-current="step"] { color:var(--accent-yellow); border-color:var(--accent-yellow); font-weight:700; }
+.camera-instruction { padding:0 28px; line-height:1.5; min-height:24px; }
+.camera-stage { position:relative; margin:0 28px; min-height:180px; height: min(46vh,420px); background:#1d2430; border:1px solid #ffffff26; border-radius:16px; overflow:hidden; }
+#ocr-video { width:100%; height:100%; object-fit:contain; }
+#camera-guide { position:absolute; inset:10% 12%; border:2px dashed #EBCB8Bb3; border-radius:12px; pointer-events:none; }
+#cropper-container { width:100%; height:100%; }
+#cropper-image { display:block; max-width:100%; max-height:100%; }
+.camera-modal #verification-container { display:flex; width:100%; max-width:none; height:100%; margin:0; padding:16px; border:0; border-radius:0; gap:12px; }
+.camera-modal #verification-container label { line-height:1.5; font-size:14px; }
+.camera-modal #verification-textarea { min-height:80px; font:16px/1.6 'Roboto',sans-serif; }
+.camera-modal .cropper-view-box, .camera-modal .cropper-face { outline-color:var(--accent-yellow); }
+.camera-modal .cropper-line, .camera-modal .cropper-point { background-color:var(--accent-yellow); }
+.camera-footer { padding:20px 28px; }
+.camera-modal .camera-actions { display:flex; justify-content:flex-end; gap:12px; margin:0; }
+.camera-modal .camera-primary { background:var(--accent-yellow); color:var(--text-color-dark); border:1px solid var(--accent-yellow); }
+.camera-modal .camera-secondary { background:var(--bot-bubble-color); color:var(--text-color-light); border:1px solid var(--user-bubble-color); }
+.camera-modal button:hover:not(:disabled) { filter:brightness(1.1); }
+.camera-modal button:disabled { opacity:.5; cursor:wait; }
+.camera-modal :focus-visible { outline:3px solid var(--accent-yellow); outline-offset:3px; }
+.camera-shutter span { margin-right:8px; }
+.camera-status { margin:16px 28px 0; padding:12px 16px; border-radius:10px; background:var(--bot-bubble-color); line-height:1.5; border-left:3px solid var(--user-bubble-color); }
+.camera-status[data-error="true"] { border-color:var(--accent-yellow); }
+.camera-note { color:#c6ceda; font-size:12px; line-height:1.5; margin:16px 0 0; }
+@media(max-width:600px) {
+ .camera-modal { padding:10px; padding-top:max(10px,env(safe-area-inset-top)); padding-bottom:max(10px,env(safe-area-inset-bottom)); }
+ .camera-panel { border-radius:18px; max-height: calc(100dvh - 20px); }
+ .camera-header { padding:20px 16px 12px; }
+ .camera-steps { padding:0 16px; }
+ .camera-instruction { padding:0 16px; font-size:14px; }
+ .camera-stage { margin:0 16px; height:40dvh; }
+ .camera-footer { padding:16px; }
+ .camera-status { margin:12px 16px 0; }
+ .camera-modal .camera-actions { flex-wrap:wrap; }
+ .camera-actions button { flex:1; }
+}
