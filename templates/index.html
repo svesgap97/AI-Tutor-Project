@@ -126,30 +126,46 @@
         <a href="/login"><button>Sign in with Google</button></a>
     </div>
 
-    <div id="ocr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:black; z-index:300; flex-direction:column; justify-content:center; align-items:center;">
-        <video id="ocr-video" playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-        <button id="ocr-capture-button" style="position:absolute; bottom:30px; width:70px; height:70px; border-radius:50%; border: 5px solid white; background-color:rgba(255,255,255,0.5); cursor:pointer;"></button>
-        
-        <div id="cropper-container" style="display:none; width:100%; height:100%;">
-            <img id="cropper-image" style="max-width:100%; max-height:100%;">
-        </div>
-
-        <div id="cropper-actions" style="display:none; position:absolute; bottom:20px; z-index:310; display:flex; gap:20px;">
-            <button id="cancel-crop-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#D08770; color:white; border:none; cursor:pointer;">Cancel</button>
-            <button id="confirm-crop-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#A3BE8C; color:white; border:none; cursor:pointer;">Confirm Crop</button>
-        </div>
-
-        <div id="verification-container" style="display:none; width: 90%; max-width: 600px; height: 80%; flex-direction: column; background-color: var(--background-color); border-radius: 10px; padding: 20px; box-sizing: border-box;">
-            <p style="margin: 0 0 10px 0; color: var(--text-color-light);">Review the recognized text:</p>
-            <textarea id="verification-textarea" style="width: 100%; flex-grow: 1; resize: none; font-family: 'Oxanium', sans-serif; font-size: 16px;"></textarea>
-            <div id="verification-actions" style="display:flex; gap: 20px; margin-top: 15px; justify-content: flex-end;">
-                <button id="go-back-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#D08770; color:white; border:none; cursor:pointer;">Back to Crop</button>
-                <button id="accept-text-button" style="font-size:16px; padding:10px 20px; border-radius:8px; background-color:#A3BE8C; color:white; border:none; cursor:pointer;">Accept</button>
+    <div id="ocr-modal" class="camera-modal" role="dialog" aria-modal="true" aria-labelledby="camera-title" hidden>
+        <section class="camera-panel">
+            <header class="camera-header">
+                <div><span class="camera-eyebrow">CLARA · WRITING CAMERA</span><h2 id="camera-title">Share your writing</h2></div>
+                <button id="ocr-close-button" type="button" class="camera-icon-button" aria-label="Close camera">&times;</button>
+            </header>
+            <ol class="camera-steps" aria-label="Photo progress">
+                <li data-step="capture">1 <span>Take photo</span></li>
+                <li data-step="crop">2 <span>Crop</span></li>
+                <li data-step="review">3 <span>Review text</span></li>
+            </ol>
+            <p id="camera-instruction" class="camera-instruction"></p>
+            <div class="camera-stage">
+                <video id="ocr-video" playsinline muted autoplay hidden></video>
+                <div id="camera-guide" aria-hidden="true" hidden></div>
+                <div id="cropper-container" hidden><img id="cropper-image" alt="Your writing, ready to crop"></div>
+                <div id="verification-container" hidden>
+                    <label for="verification-textarea">Check the text and correct anything Clara misread.</label>
+                    <textarea id="verification-textarea" spellcheck="true"></textarea>
+                </div>
             </div>
-        </div>
-        
-        <p id="ocr-status" style="position:absolute; top:30px; color:white; background-color:rgba(0,0,0,0.5); padding:10px; border-radius:10px; display:none;">Processing...</p>
-        <button id="ocr-close-button" style="position:absolute; top:20px; right:20px; font-size:24px; color:white; background:none; border:none; cursor:pointer; z-index: 320;">&times;</button>
+            <p id="ocr-status" class="camera-status" role="status" aria-live="polite" hidden></p>
+            <footer class="camera-footer">
+                <div id="capture-actions" class="camera-actions">
+                    <button id="camera-upload-button" class="camera-secondary" type="button">Choose a photo</button>
+                    <input id="camera-file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                    <button id="camera-retry-button" class="camera-secondary" type="button" hidden>Try camera again</button>
+                    <button id="ocr-capture-button" class="camera-primary camera-shutter" type="button" disabled><span aria-hidden="true">●</span> Take photo</button>
+                </div>
+                <div id="cropper-actions" class="camera-actions" hidden>
+                    <button id="cancel-crop-button" class="camera-secondary" type="button">Retake photo</button>
+                    <button id="confirm-crop-button" class="camera-primary" type="button">Read this text</button>
+                </div>
+                <div id="verification-actions" class="camera-actions" hidden>
+                    <button id="go-back-button" class="camera-secondary" type="button">Back to crop</button>
+                    <button id="accept-text-button" class="camera-primary" type="button">Add to message</button>
+                </div>
+                <p class="camera-note">Review before sharing. Text is added to your draft; you choose when to send it.</p>
+            </footer>
+        </section>
     </div>
 
     <script src="/static/script.js" defer></script>

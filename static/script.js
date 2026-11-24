@@ -226,87 +226,281 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- LÓGICA DE OCR (SIN CAMBIOS) ---
-    function cleanupOcr() {
-        if (videoStream) {
-            videoStream.getTracks().forEach(track => track.stop());
-            videoStream = null;
-        }
-        if (cropper) {
-            cropper.destroy();
-            cropper = null;
-        }
-        ocrModal.style.display = 'none';
+    // Camera workflow: capture -> crop -> review. Closing cancels pending work.
+    const captureActions = document.getElementById('capture-actions');
+    const cropActions = document.getElementById('cropper-actions');
+    const reviewActions = document.getElementById('verification-actions');
+    const cameraRetry = document.getElementById('camera-retry-button');
+    const cameraGuide = document.getElementById('camera-guide');
+    const cameraInstruction = document.getElementById('camera-instruction');
+    const cameraUpload = document.getElementById('camera-upload-button');
+    const cameraFile = document.getElementById('camera-file-input');
+    let cameraWaitTimer = null;
+    let cameraSession = 0;
+    let ocrRequest = null;
+    let previousFocus = null;
+
+    function stopCamera() {
+        clearTimeout(cameraWaitTimer);
+        videoStream?.getTracks().forEach(track => track.stop());
+        videoStream = null;
+        ocrVideo.srcObject = null;
     }
-    
-    ocrButton.addEventListener('click', async () => {
+    function cameraStatus(message = '', error = false) {
+        ocrStatus.textContent = message;
+        ocrStatus.hidden = !message;
+        ocrStatus.dataset.error = String(error);
+    }
+    function cameraStep(step) {
+        ocrModal.dataset.step = step;
+        ocrVideo.hidden = step !== 'capture';
+        cameraGuide.hidden = step !== 'capture';
+        captureActions.hidden = step !== 'capture';
+        cropperContainer.hidden = step !== 'crop';
+        cropActions.hidden = step !== 'crop';
+        verificationContainer.hidden = step !== 'review';
+        reviewActions.hidden = step !== 'review';
+        document.querySelectorAll('.camera-steps li').forEach(item => {
+            if (item.dataset.step === step) item.setAttribute('aria-current', 'step');
+            else item.removeAttribute('aria-current');
+        });
+        cameraInstruction.textContent = {
+            capture: 'Place your page in good light. Keep the writing inside the frame and hold steady.',
+            crop: 'Drag the corners to keep only the writing you want Clara to read.',
+            review: 'Your voice matters. Check the recognized text before adding it to your message.'
+        }[step];
+    }
+    function cleanupOcr() {
+        cameraSession++;
+        ocrRequest?.abort();
+        ocrRequest = null;
+        stopCamera();
+        cropper?.destroy();
+        cropper = null;
+        cropperImage.removeAttribute('src');
+        verificationTextarea.value = '';
+        ocrModal.hidden = true;
+        ocrModal.removeAttribute('aria-busy');
+        document.getElementById('cancel-crop-button').disabled = false;
+        appContainer.inert = false;
+        confirmCropButton.disabled = false;
+        cameraStatus();
+        (previousFocus || ocrButton).focus();
+    }
+    async function startCamera() {
+        const session = ++cameraSession;
+        stopCamera();
+        cropper?.destroy();
+        cropper = null;
+        cameraStep('capture');
+        ocrCaptureButton.disabled = true;
+        cameraRetry.hidden = true;
+        cameraStatus('Opening your camera… Allow camera access if your browser asks.');
+        cameraWaitTimer = setTimeout(() => {
+            if (session === cameraSession && !videoStream) cameraStatus('Still waiting for camera access. Allow it in your browser, or choose a photo from your computer.', true);
+        }, 10000);
         try {
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
-            ocrVideo.srcObject = videoStream;
+            if (!navigator.mediaDevices?.getUserMedia) {
+                throw new Error(window.isSecureContext ? 'Camera unsupported' : 'Camera requires HTTPS');
+            }
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    // Desktop browsers use the default webcam; phones prefer the rear camera.
+                    video: {
+                        ...(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+                            ? { facingMode: { ideal: 'environment' } } : {}),
+                        width: { ideal: 1920 }, height: { ideal: 1080 }
+                    },
+                    audio: false
+                });
+            } catch (error) {
+                if (!['OverconstrainedError', 'NotFoundError'].includes(error.name)) throw error;
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            }
+            if (session !== cameraSession || ocrModal.hidden) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+            clearTimeout(cameraWaitTimer);
+            videoStream = stream;
+            ocrVideo.srcObject = stream;
             await ocrVideo.play();
-            ocrModal.style.display = 'flex';
-            cropperContainer.style.display = 'none';
-            verificationContainer.style.display = 'none';
-            ocrVideo.style.display = 'block';
-            ocrCaptureButton.style.display = 'block';
-        } catch (err) {
-            console.error("Error al acceder a la cámara:", err);
-            alert("Could not access the camera.");
+            if (session !== cameraSession) return;
+            ocrCaptureButton.disabled = false;
+            cameraStatus();
+            ocrCaptureButton.focus();
+        } catch (error) {
+            if (session !== cameraSession) return;
+            stopCamera();
+            cameraGuide.hidden = true;
+            cameraStatus(error.message === 'Camera requires HTTPS'
+                ? 'Camera access needs HTTPS or localhost. Open Clara using a secure address.'
+                : error.message === 'Camera unsupported'
+                ? 'This browser cannot open the camera. Try opening this address in Chrome, Edge, Firefox or Safari.'
+                : error.name === 'NotFoundError'
+                ? 'No webcam was found. Connect or enable your laptop camera, then try again.'
+                : error.name === 'NotReadableError'
+                ? 'Your webcam is busy or blocked by the system. Close other camera apps and check your laptop privacy settings.'
+                : error.name === 'NotAllowedError'
+                ? 'Camera access is blocked. Allow camera access in your browser, then try again.'
+                : 'The camera could not open. Check that it is connected and not in use, then try again.', true);
+            cameraRetry.hidden = false;
+            cameraRetry.focus();
         }
+    }
+    ocrButton.addEventListener('click', () => {
+        if (!ocrModal.hidden) return;
+        previousFocus = document.activeElement;
+        ocrModal.hidden = false;
+        appContainer.inert = true;
+        ocrCloseButton.focus();
+        startCamera();
     });
-    
+    cameraUpload.addEventListener('click', () => cameraFile.click());
+    cameraFile.addEventListener('change', () => {
+        const file = cameraFile.files[0];
+        cameraFile.value = '';
+        if (!file) return;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            cameraStatus('Choose a JPG, PNG or WebP photo.', true);
+            return;
+        }
+        if (file.size > 20 * 1024 * 1024) {
+            cameraStatus('Choose a photo smaller than 20 MB.', true);
+            return;
+        }
+        if (typeof Cropper === 'undefined') {
+            cameraStatus('The photo editor did not load. Check your connection and reload the page.', true);
+            return;
+        }
+        const session = ++cameraSession;
+        stopCamera();
+        cameraStatus('Opening your photo…');
+        const reader = new FileReader();
+        reader.onerror = () => {
+            if (session === cameraSession) cameraStatus('This photo could not be opened. Choose another photo.', true);
+        };
+        reader.onload = () => {
+            if (session !== cameraSession || ocrModal.hidden) return;
+            const image = new Image();
+            image.onerror = () => {
+                if (session === cameraSession) cameraStatus('This photo could not be opened. Choose another photo.', true);
+            };
+            image.onload = () => {
+                if (session !== cameraSession || ocrModal.hidden) return;
+                cropper?.destroy();
+                cropperImage.src = reader.result;
+                cameraStep('crop');
+                cameraStatus();
+                cropper = new Cropper(cropperImage, {
+                    viewMode: 1, background: false, autoCropArea: 0.9,
+                    responsive: true, ready() { confirmCropButton.focus(); }
+                });
+            };
+            image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    cameraRetry.addEventListener('click', startCamera);
+    document.getElementById('cancel-crop-button').addEventListener('click', startCamera);
+
     ocrCaptureButton.addEventListener('click', () => {
+        if (!ocrVideo.videoWidth || !ocrVideo.videoHeight || !videoStream) {
+            cameraStatus('The camera is still getting ready. Please try again.', true);
+            return;
+        }
+        if (typeof Cropper === 'undefined') {
+            cameraStatus('The photo editor could not load. Close the camera and reload the page to try again.', true);
+            return;
+        }
         const canvas = document.createElement('canvas');
         canvas.width = ocrVideo.videoWidth;
         canvas.height = ocrVideo.videoHeight;
         canvas.getContext('2d').drawImage(ocrVideo, 0, 0);
-        cropperImage.src = canvas.toDataURL('image/jpeg');
-
-        ocrVideo.style.display = 'none';
-        ocrCaptureButton.style.display = 'none';
-        cropperContainer.style.display = 'block';
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropperImage, { viewMode: 1, background: false });
+        cropperImage.src = canvas.toDataURL('image/jpeg', 0.92);
+        stopCamera();
+        cameraStatus();
+        cameraStep('crop');
+        cropper?.destroy();
+        cropper = new Cropper(cropperImage, {
+            viewMode: 1, background: false, autoCropArea: 0.9,
+            responsive: true, ready() { confirmCropButton.focus(); }
+        });
     });
-
     confirmCropButton.addEventListener('click', async () => {
-        ocrStatus.innerText = 'Processing...';
-        ocrStatus.style.display = 'block';
+        if (!cropper || confirmCropButton.disabled) return;
+        const canvas = cropper.getCroppedCanvas({ maxWidth: 2400, maxHeight: 2400 });
+        if (!canvas || !canvas.width || !canvas.height) {
+            cameraStatus('Select an area of your photo first.', true);
+            return;
+        }
+        const session = cameraSession;
+        const request = new AbortController();
+        ocrRequest = request;
+        confirmCropButton.disabled = true;
+        document.getElementById('cancel-crop-button').disabled = true;
+        ocrModal.setAttribute('aria-busy', 'true');
+        cameraStatus('Clara is reading your writing…');
         try {
-            const croppedCanvas = cropper.getCroppedCanvas();
-            const imageDataURL = croppedCanvas.toDataURL('image/jpeg', 0.9);
             const response = await fetch('/api/ocr', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageDataURL })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.9) }),
+                signal: request.signal
             });
-            if (!response.ok) throw new Error('The server request failed.');
+            if (!response.ok) throw new Error('OCR request failed');
             const data = await response.json();
+            if (session !== cameraSession) return;
+            if (typeof data.text !== 'string' || !data.text.trim()) {
+                cameraStatus('No text was found. Adjust the crop or retake the photo with better lighting.', true);
+                return;
+            }
             verificationTextarea.value = data.text;
-            cropperContainer.style.display = 'none';
-            verificationContainer.style.display = 'flex';
-        } catch (err) {
-            console.error("Error en OCR:", err);
-            alert("Could not recognize the text.");
-            cleanupOcr();
+            cameraStep('review');
+            cameraStatus();
+            verificationTextarea.focus();
+        } catch (error) {
+            if (session === cameraSession && error.name !== 'AbortError') {
+                cameraStatus('Clara could not read the photo. Your photo is still here: try again or adjust the crop.', true);
+            }
         } finally {
-            ocrStatus.style.display = 'none';
+            if (session === cameraSession) {
+                ocrRequest = null;
+                confirmCropButton.disabled = false;
+                document.getElementById('cancel-crop-button').disabled = false;
+                ocrModal.removeAttribute('aria-busy');
+            }
         }
     });
-
     acceptTextButton.addEventListener('click', () => {
-        userInput.value = verificationTextarea.value;
-        userInput.style.height = 'auto';
-        userInput.style.height = userInput.scrollHeight + 'px';
+        const text = verificationTextarea.value.trim();
+        if (!text) {
+            cameraStatus('Add some text or go back to crop before continuing.', true);
+            verificationTextarea.focus();
+            return;
+        }
+        userInput.value = [userInput.value.trim(), text].filter(Boolean).join('\n\n');
         cleanupOcr();
+        userInput.dispatchEvent(new Event('input'));
+        userInput.focus();
     });
-
     goBackButton.addEventListener('click', () => {
-        verificationContainer.style.display = 'none';
-        cropperContainer.style.display = 'block';
+        cameraStep('crop');
+        cameraStatus();
+        confirmCropButton.focus();
     });
-
     ocrCloseButton.addEventListener('click', cleanupOcr);
+    ocrModal.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); cleanupOcr(); }
+        if (event.key === 'Tab') {
+            const elements = [...ocrModal.querySelectorAll('button:not(:disabled), textarea')].filter(el => el.getClientRects().length);
+            const first = elements[0], last = elements[elements.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+    });
+    window.addEventListener('pagehide', cleanupOcr);
 
     // --- LISTENERS ---
     setupConsentHandlers();
