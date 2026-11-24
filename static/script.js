@@ -233,11 +233,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const cameraRetry = document.getElementById('camera-retry-button');
     const cameraGuide = document.getElementById('camera-guide');
     const cameraInstruction = document.getElementById('camera-instruction');
+    const cameraUpload = document.getElementById('camera-upload-button');
+    const cameraFile = document.getElementById('camera-file-input');
+    let cameraWaitTimer = null;
     let cameraSession = 0;
     let ocrRequest = null;
     let previousFocus = null;
 
     function stopCamera() {
+        clearTimeout(cameraWaitTimer);
         videoStream?.getTracks().forEach(track => track.stop());
         videoStream = null;
         ocrVideo.srcObject = null;
@@ -291,7 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraStep('capture');
         ocrCaptureButton.disabled = true;
         cameraRetry.hidden = true;
-        cameraStatus('Opening your camera…');
+        cameraStatus('Opening your camera… Allow camera access if your browser asks.');
+        cameraWaitTimer = setTimeout(() => {
+            if (session === cameraSession && !videoStream) cameraStatus('Still waiting for camera access. Allow it in your browser, or choose a photo from your computer.', true);
+        }, 10000);
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
                 throw new Error(window.isSecureContext ? 'Camera unsupported' : 'Camera requires HTTPS');
@@ -315,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 stream.getTracks().forEach(track => track.stop());
                 return;
             }
+            clearTimeout(cameraWaitTimer);
             videoStream = stream;
             ocrVideo.srcObject = stream;
             await ocrVideo.play();
@@ -349,6 +357,52 @@ document.addEventListener('DOMContentLoaded', () => {
         ocrCloseButton.focus();
         startCamera();
     });
+    cameraUpload.addEventListener('click', () => cameraFile.click());
+    cameraFile.addEventListener('change', () => {
+        const file = cameraFile.files[0];
+        cameraFile.value = '';
+        if (!file) return;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            cameraStatus('Choose a JPG, PNG or WebP photo.', true);
+            return;
+        }
+        if (file.size > 20 * 1024 * 1024) {
+            cameraStatus('Choose a photo smaller than 20 MB.', true);
+            return;
+        }
+        if (typeof Cropper === 'undefined') {
+            cameraStatus('The photo editor did not load. Check your connection and reload the page.', true);
+            return;
+        }
+        const session = ++cameraSession;
+        stopCamera();
+        cameraStatus('Opening your photo…');
+        const reader = new FileReader();
+        reader.onerror = () => {
+            if (session === cameraSession) cameraStatus('This photo could not be opened. Choose another photo.', true);
+        };
+        reader.onload = () => {
+            if (session !== cameraSession || ocrModal.hidden) return;
+            const image = new Image();
+            image.onerror = () => {
+                if (session === cameraSession) cameraStatus('This photo could not be opened. Choose another photo.', true);
+            };
+            image.onload = () => {
+                if (session !== cameraSession || ocrModal.hidden) return;
+                cropper?.destroy();
+                cropperImage.src = reader.result;
+                cameraStep('crop');
+                cameraStatus();
+                cropper = new Cropper(cropperImage, {
+                    viewMode: 1, background: false, autoCropArea: 0.9,
+                    responsive: true, ready() { confirmCropButton.focus(); }
+                });
+            };
+            image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
     cameraRetry.addEventListener('click', startCamera);
     document.getElementById('cancel-crop-button').addEventListener('click', startCamera);
 
